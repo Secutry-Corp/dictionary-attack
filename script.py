@@ -1,13 +1,9 @@
-# This script dexcipher a ciphered file calculating the hash from every line of a dictionary and trying it. Then uses the already precalculated hashes and desciphers again.
 import sys
 import cryptography
-import os
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-import base64
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-from cryptography.hazmat.primitives import padding
+import time
 
 cipherText = open("xifrat.bin", 'rb').read()
 
@@ -18,23 +14,32 @@ def desxifrar_text(text_xifrat, clau):
     return text_desxifrat
 
 def descipherFromHash():
-    print("Descifrant text...")
+    print("----Desxifrant text amb diccionari de hashos precomputats.")
+    file = open("resultat_precomputats.txt", "w")
     hashesFile = open("pbkdf2.txt", "rb")
+    start_time = time.time()
     for line in hashesFile:
         line = line.strip()
         try:
             text_desxifrat = desxifrar_text(cipherText[16:], line)
             if text_desxifrat.decode("utf-8"):
-                print(f"El hash de la contraseña és: {line}")
-                print(f"Desxifrat completat")
+                print(f"------El hash de la contraseña és: {line}")
+                print(f"------Desxifrat amb diccionari completat")
+                file.write(text_desxifrat.decode("utf-8"))
+                end_time = time.time()  # Record the end time
+                elapsed_time = end_time - start_time
+                print(f"-------Temps amb hash SI precomputats: {elapsed_time} segons")
+                file.close()
                 exit()
         except Exception as e:
             pass
 
 def pbkdf2():
+    print("----Desxifrant text sense diccionari de hashos precomputats.")
     file = open("output.txt", "rb")
     with open("pbkdf2.txt", "wb") as binary_file:
-        dexifrat = open("desxifrat.txt", 'w')
+        dexifrat = open("resultat_no_precomputats.txt", 'w')
+        start_time = time.time()
         for line in file:
             line = line.strip()
             kdf = PBKDF2HMAC(
@@ -55,9 +60,12 @@ def pbkdf2():
                 text_desxifrat = desxifrar_text(cipherText[16:], key)
                 
                 if text_desxifrat.decode("utf-8"):
-                    print(f"La contrasenya és: {line}")
-                    print(f"Desxifrat completat")
+                    print(f"------La contrasenya és: {line}")
+                    print(f"------Desxifrat completat")
                     dexifrat.write(text_desxifrat.decode("utf-8"))
+                    end_time = time.time()  # Record the end time
+                    elapsed_time = end_time - start_time
+                    print(f"-------Temps amb hash NO precomputat: {elapsed_time} segons")
             except Exception as e:
                 pass
 
@@ -66,6 +74,7 @@ def pbkdf2():
         dexifrat.close()
 
 def passwordsGeneration():
+    print("--Generant diccionari.")
     if len(sys.argv) != 2:
         print("Usage: python3 script.py <file>")
         sys.exit(1)
@@ -82,15 +91,12 @@ def passwordsGeneration():
             outputFile.write(line + str(i) + "\n")
             for j in range(0, 10):
                 outputFile.write(line + str(i) + str(j) + "\n")
-                print(line + str(i) + str(j))
     file.close()
     outputFile.close()
+    print("--Diccionari generat.")
 
 
 if __name__ == "__main__":
-    "We start by generating the dictionary of all words that will be a password"
-    #passwordsGeneration()
-    "Once we have generated the passwords on plain text. We generate the passwords on pbkdf2"
+    passwordsGeneration()
     pbkdf2()
     descipherFromHash()
-    
